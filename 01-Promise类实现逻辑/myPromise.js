@@ -11,16 +11,21 @@ class MyPromise {
   value = undefined;
   reason = undefined;
 
+  successCallback = undefined;
+  failCallback = undefined;
+
   resolve = value => {
     if (this.status !== PENDING) return;
     this.status = FULLFILLED;
     this.value = value;
+    this.successCallback && this.successCallback(value);
   };
 
   reject = reason => {
     if (this.status !== PENDING) return;
     this.status = FAILED;
     this.reason = reason;
+    this.failCallback && this.failCallback(reason);
   };
 
   then = (successCallback, failCallback) => {
@@ -29,6 +34,8 @@ class MyPromise {
     } else if (this.status === FAILED) {
       failCallback(this.reason);
     } else {
+      this.successCallback = successCallback;
+      this.failCallback = failCallback;
     }
   };
 }
