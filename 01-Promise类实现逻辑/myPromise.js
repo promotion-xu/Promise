@@ -4,7 +4,11 @@ const FAILED = "failed";
 
 class MyPromise {
   constructor(exec) {
-    exec(this.resolve, this.reject);
+    try {
+      exec(this.resolve, this.reject);
+    } catch (e) {
+      this.reject(e);
+    }
   }
 
   status = PENDING;
@@ -21,7 +25,6 @@ class MyPromise {
     while (this.successCallback.length) {
       this.successCallback.shift()(value);
     }
-    // this.successCallback && this.successCallback(value);
   };
 
   reject = reason => {
@@ -31,7 +34,6 @@ class MyPromise {
     while (this.failCallback.length) {
       this.failCallback.shift()(reason);
     }
-    // this.failCallback && this.failCallback(reason);
   };
 
   then = (successCallback, failCallback) => {
@@ -41,14 +43,43 @@ class MyPromise {
         // 如果是普通值，直接返回resolve
         // 如果是promise, 查看结果返回resolve or reject
         setTimeout(() => {
-          let x = successCallback(this.value);
-          resolvePromise(promise2, x, resolve, reject);
+          try {
+            let x = successCallback(this.value);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
         }, 0);
       } else if (this.status === FAILED) {
-        failCallback(this.reason);
+        setTimeout(() => {
+          try {
+            let x = failCallback(this.reason);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
+        }, 0);
       } else {
-        this.successCallback.push(successCallback);
-        this.failCallback.push(failCallback);
+        this.successCallback.push(() => {
+          setTimeout(() => {
+            try {
+              let x = successCallback(this.value);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (e) {
+              reject(e);
+            }
+          }, 0);
+        });
+        this.failCallback.push(() => {
+          setTimeout(() => {
+            try {
+              let x = failCallback(this.reason);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (e) {
+              reject(e);
+            }
+          }, 0);
+        });
       }
     });
     return promise2;
