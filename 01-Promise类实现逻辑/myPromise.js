@@ -23,7 +23,7 @@ class MyPromise {
     this.status = FULLFILLED;
     this.value = value;
     while (this.successCallback.length) {
-      this.successCallback.shift()(value);
+      this.successCallback.shift()();
     }
   };
 
@@ -32,11 +32,17 @@ class MyPromise {
     this.status = FAILED;
     this.reason = reason;
     while (this.failCallback.length) {
-      this.failCallback.shift()(reason);
+      this.failCallback.shift()();
     }
   };
 
   then = (successCallback, failCallback) => {
+    successCallback = successCallback ? successCallback : value => value;
+    failCallback = failCallback
+      ? failCallback
+      : reason => {
+          throw reason;
+        };
     let promise2 = new MyPromise((resolve, reject) => {
       if (this.status === FULLFILLED) {
         // 要判断返回的值x是promise,还是普通值
@@ -83,6 +89,31 @@ class MyPromise {
       }
     });
     return promise2;
+  };
+
+  static all = array => {
+    let result = [];
+    let i = 0;
+
+    return new MyPromise((resolve, reject) => {
+      function addValueToResult(index, value) {
+        result[index] = value;
+        i++;
+        if (i === array.length) {
+          resolve(result);
+        }
+      }
+      array.forEach((item, index) => {
+        if (item instanceof MyPromise) {
+          item.then(
+            value => addValueToResult(index, value),
+            reason => reject(reason)
+          );
+        } else {
+          addValueToResult(index, item);
+        }
+      });
+    });
   };
 }
 
